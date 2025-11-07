@@ -1,0 +1,535 @@
+##Figure 2A
+
+library(ggplot2)
+library(data.table)
+library(stringr)
+library(dplyr)
+library(lubridate)
+library(tidyr)
+library(rprojroot)
+library(vegan)
+library(wesanderson)
+library(cowplot)
+library(ggpubr)
+library(rstatix)
+
+virome_table=sprintf("WES-Data.txt")
+metadata_table=sprintf("WES-MetaData.txt")
+virome_dt <- fread(virome_table, sep = "\t", header = T )
+meta_dt <- fread(metadata_table, sep = "\t", header = T )
+seqname_sID_wide_dt <- 
+  virome_dt %>% 
+  subset(select = c("sequence_name", "sample_ID", "RPKMF")) %>%
+  distinct(sequence_name, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = sequence_name, values_from = RPKMF, values_fill = 0)
+
+sampleID_l <- seqname_sID_wide_dt$sample_ID
+
+seqname_sID_wide_dt <- seqname_sID_wide_dt %>%
+                          subset(select = -sample_ID)
+
+
+bray_curtis_dist <- vegdist(seqname_sID_wide_dt, method="bray")
+bray_curtis_mat <- as.matrix(bray_curtis_dist)
+bray_curtis_df <- as.data.frame(bray_curtis_mat)
+colnames(bray_curtis_df) <- sampleID_l
+rownames(bray_curtis_df) <- sampleID_l
+bray_curtis_df$sampleID1 <- rownames(bray_curtis_df)
+melt_long <- melt(setDT(bray_curtis_df), 
+                  id.vars = c("sampleID1"), variable.name = "sampleID2")
+meta_long <- merge(melt_long, meta_dt, 
+                   by.x = "sampleID1", by.y = "sample_ID", 
+                   all.x = T, suffixes = c("", ".1"))
+meta_long <- merge(meta_long, meta_dt, 
+                   by.x = "sampleID2", by.y = "sample_ID", 
+                   all.x = T, suffixes = c(".1", ".2"))
+meta_long$Date.1 <- as.Date(meta_long$Date.1, , "%d-%m-%Y")
+meta_long$Date.2 <- as.Date(meta_long$Date.2, , "%d-%m-%Y")
+same_site_bray_dt <- meta_long %>% 
+  filter(sampleID1 != sampleID2) %>%
+  filter(Site.1 == Site.2)
+
+same_site_bray_dt$time_passed <- 
+  difftime(same_site_bray_dt$Date.1, 
+           same_site_bray_dt$Date.2, units = "days") %>% 
+  gsub(" days", "", .)
+
+same_site_bray_dt$time_passed <- as.numeric(same_site_bray_dt$time_passed)
+same_site_bray_dt <- same_site_bray_dt %>% 
+  filter(time_passed >= 1)
+
+uniqueN(same_site_bray_dt$Site.1)
+
+same_site_bray_dt$City_Site <- str_c(
+  same_site_bray_dt$City, ", ", same_site_bray_dt$Site)
+same_site_bray_dt$City_Site <- str_c(
+  same_site_bray_dt$City.1, ", ", same_site_bray_dt$Site.1)
+
+
+site_palette_gra <- c("#004d6a", "#004d7a", "#008793", "#00bf72", "#a8eb12", "#d16ba5", "#ba83ca", "#9a9ae1", "#79b3f4", "#52cffe", 
+                  "#3c1c4b", "#672f61", "#aa5579", "#f1aa75", "#f8dd91", 
+                  "#02187c", "#0243a4", "#144ddf", "#1d85ee",  "#3bcebb",
+                  "#fcdb32", "#fba10a", "#f24240", "#9a0e14")
+
+same_site_bray_dt %>%
+  mutate(City_Site = str_c(City.1, ", ", Site.1)) %>%
+  ggplot(aes(x=time_passed, y=value, color=City_Site)) +
+  geom_point(alpha=0.4, size = 1.5, stroke = 0) +
+  geom_smooth(method = "loess", se = FALSE, color = "black") +
+  scale_color_manual(values = site_palette_gra) +
+  facet_wrap(vars(City.1, Site.1)) +
+  labs(x = "Days Between Sampling", y = "Bray-Curtis Dissimilarity") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 13), text = element_text(colour = "black", size = 13), axis.title.y = element_text(size = 13, colour = "black"), axis.text = element_text(size = 12, colour = "black"),
+        legend.position = "Off", strip.text = element_text(color = "black", size = 13), strip.background = element_rect(color="black", fill="#e5e5e5", size=0.5, linetype="solid")) 
+				  
+
+all_nonself_bray_dt <- meta_long %>% 
+  filter(sampleID1 != sampleID2)
+
+all_nonself_bray_dt$time_passed <- difftime(
+  all_nonself_bray_dt$Date.1, all_nonself_bray_dt$Date.2, units = "days"
+) %>% 
+  gsub(" days", "", .) %>% gsub("-", "", .)
+all_nonself_bray_dt$time_passed <- as.numeric(all_nonself_bray_dt$time_passed)
+
+
+##Figure 2B
+
+same_week_dt <- all_nonself_bray_dt %>%
+   filter(time_passed <= 14) %>%
+  mutate(site_compare = case_when(
+    Site.1 == Site.2 ~ 'Intra-Site (Within Site)',
+    Site.1 != Site.2 & City.1 == City.2 ~ 'Inter-Site (Within City)',
+    City.1 != City.2 ~ 'Inter-City (Between City)',
+    TRUE ~ 'idk'
+  ))
+  
+library(ggpubr)
+same_week_dt %>%
+  mutate(City_Site = str_c(City.1, ", ", Site.1)) %>%
+  ggplot(aes(factor(site_compare), value)) +
+  geom_violin(aes(fill = factor(site_compare)), draw_quantiles = c(0.25, 0.5, 0.75), linetype = "dotted", scale = "width") +
+  geom_violin(fill="transparent", draw_quantiles = c(0.5), scale = "width") +
+  stat_compare_means(label = "p.signif", size = 6,
+                     comparisons = 
+                       list(c("Intra-Site (Within Site)", "Inter-Site (Within City)"), c("Intra-Site (Within Site)", "Inter-City (Between City)"),
+                            c("Inter-Site (Within City)", "Inter-City (Between City)"))) +
+  scale_fill_manual(values = c("#778da9","#a49fd6","#f5dfbb")) +
+  labs(y="Bray-Curtis Dissimilarity", x = "") +
+  theme(axis.text.x = element_text( size = 12, colour = "black"),axis.text.y = element_text(size = 12, colour = "black"),panel.grid.major = element_blank(),
+        legend.position = "Off") + 
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 13), text = element_text(colour = "black", size = 13), axis.title.y = element_text(size = 13, colour = "black"), axis.text = element_text(size = 12, colour = "black"),
+        legend.position = "Off" ) 
+
+
+##Figure 2C
+
+
+library(ggplot2)
+library(data.table)
+library(stringr)
+library(dplyr)
+library(lubridate)
+library(tidyr)
+library(rprojroot)
+library(Rtsne)
+library(wesanderson)
+library(cowplot)
+
+virome_table=sprintf("WES-Data-DNA-Lib.txt")
+metadata_table=sprintf("WES-MetaData-with-lib-for-tsne-DNA.txt")
+
+virome_table=sprintf("WES-Data-RNA-Lib.txt")
+metadata_table=sprintf("WES-MetaData-with-lib-for-tsne-RNA.txt")
+
+
+virome_dt <- fread(virome_table, sep = "\t", header = T )
+meta_dt <- fread(metadata_table, sep = "\t", header = T )
+
+seqname_sID_wide_dt <- 
+  virome_dt %>% 
+  subset(select = c("sequence_name", "sample_ID", "RPKMF")) %>%
+  distinct(sequence_name, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = sequence_name, values_from = RPKMF, values_fill = 0)
+
+sampleID_l <- seqname_sID_wide_dt$sample_ID
+
+seqname_sID_wide_dt <- seqname_sID_wide_dt %>% subset(select = -sample_ID)
+tephi_prcomp1 <- prcomp(log10(seqname_sID_wide_dt+1))
+
+emb <- Rtsne::Rtsne(tephi_prcomp1$x[,1:10])
+
+embb <- emb$Y
+
+rownames(embb) <- sampleID_l
+
+embb_df <- as.data.frame(embb)
+
+embb_dt <- setDT(embb_df, keep.rownames = "sample_ID")
+
+embb_dt <- merge(embb_dt, meta_dt, by ="sample_ID")
+
+embb_dt$City_Site <- str_c(embb_dt$City, ", ", embb_dt$Site)
+
+embb_dt$Date <- as.Date(embb_dt$Date, , "%d-%m-%Y")
+
+city_tsnep <- embb_dt %>%
+  ggplot(aes(x = V1, y = V2, color = City, shape = City)) +
+  geom_point(size = 3, alpha = 0.8) +
+  scale_color_manual(values = c(
+    "Ahmedabad" = "#0070c0",
+    "Gandhinagar" = "#da3030",
+    "Vadodara" = "#354e68",
+    "Rajkot" = "#ffa700"
+  )) +  #  +  scale_color_manual(values = c("DNA" = "#0f8b8d", "RNA" = "#a8201a"))
+  theme_bw() +
+  labs(x = "tSNE-1", y = "tSNE-2", color = "City", shape = "City") + 
+  theme(legend.text = element_text(size = 12),  legend.key.size = unit(0.5, "cm"), legend.title = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(angle = 90,hjust=1,colour = "black", size = 12), axis.text = element_text(colour = "black", size = 12), axis.text.y = element_text(size = 13), axis.title.y = element_text(size = 13, color = "black"),
+        panel.grid.major.x = element_blank()) +
+  theme(axis.text.x = element_text(size = 13, colour = "black"),  axis.title.x = element_text(size = 13, color =  "black"))
+
+
+city_tsnep
+
+as.Date_origin <- function(x){
+  as.Date(x, origin = '1970-01-01')
+}
+
+date_tsnep <- embb_dt %>%
+  ggplot(aes(x=V1, y=V2, color=as.integer(Date), shape = City)) +
+  geom_point(size = 3, alpha = 0.8) +
+  scale_color_gradient(low = "#282359",
+                       high = "#f59843", labels=as.Date_origin, name = "Date") +       #low = #282359, high = #d12e27
+  theme_bw() +
+  labs(x="tSNE-1", y="tSNE-2") + 
+  theme(legend.text = element_text(size = 12),  legend.key.size = unit(0.5, "cm"), legend.title = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(angle = 90,hjust=1,colour = "black", size = 12), axis.text = element_text(colour = "black", size = 12), axis.text.y = element_text(size = 13), axis.title.y = element_text(size = 13, color = "black"),
+        panel.grid.major.x = element_blank()) +
+  theme(axis.text.x = element_text(size = 13, colour = "black"),  axis.title.x = element_text(size = 13, color =  "black"))
+
+
+date_tsnep
+
+
+##Figure S1
+
+virome_dt <- fread("WES-Data.txt", sep = "\t", header = TRUE)
+meta_dt <- fread("WES-MetaData-with-lib-for-tsne.txt", sep = "\t", header = TRUE)
+
+seqname_sID_wide_dt <- 
+  virome_dt %>% 
+  subset(select = c("sequence_name", "sample_ID", "RPKMF")) %>%
+  distinct(sequence_name, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = sequence_name, values_from = RPKMF, values_fill = 0)
+
+sampleID_l <- seqname_sID_wide_dt$sample_ID
+
+seqname_sID_wide_dt <- seqname_sID_wide_dt %>% subset(select = -sample_ID)
+tephi_prcomp1 <- prcomp(log10(seqname_sID_wide_dt+1))
+
+emb <- Rtsne::Rtsne(tephi_prcomp1$x[,1:10])
+
+embb <- emb$Y
+
+rownames(embb) <- sampleID_l
+
+embb_df <- as.data.frame(embb)
+
+embb_dt <- setDT(embb_df, keep.rownames = "sample_ID")
+
+embb_dt <- merge(embb_dt, meta_dt, by ="sample_ID")
+
+embb_dt$City_Site <- str_c(embb_dt$City, ", ", embb_dt$Site)
+
+embb_dt$Date <- as.Date(embb_dt$Date, , "%d-%m-%Y")
+
+city_tsnep <- embb_dt %>%
+  ggplot(aes(x = V1, y = V2, color = Library, shape = City)) +
+  geom_point(size = 3, alpha = 0.8) +
+  scale_color_manual(values = c("DNA" = "#f9742f", "RNA" = "#530f68")) + 
+  theme_bw() +
+  labs(x = "tSNE-1", y = "tSNE-2", color = "Library Type", shape = "City") + 
+  theme(legend.text = element_text(size = 12),  legend.key.size = unit(0.5, "cm"), legend.title = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(angle = 90,hjust=1,colour = "black", size = 12), axis.text = element_text(colour = "black", size = 12), axis.text.y = element_text(size = 13), axis.title.y = element_text(size = 13, color = "black"),
+        panel.grid.major.x = element_blank()) +
+  theme(axis.text.x = element_text(size = 13, colour = "black"),  axis.title.x = element_text(size = 13, color =  "black"))
+
+
+city_tsnep
+
+as.Date_origin <- function(x){
+  as.Date(x, origin = '1970-01-01')
+}
+
+
+date_tsnep <- embb_dt %>%
+  ggplot(aes(x=V1, y=V2, color=as.integer(Date), shape = City)) +
+  geom_point(size = 3, alpha = 0.8) +
+  scale_color_gradient(low = "#282359",
+                       high = "#f59843", labels=as.Date_origin, name = "Date") +       #low = #282359, high = #d12e27
+  theme_bw() +
+  labs(x="tSNE-1", y="tSNE-2") + 
+  theme(legend.text = element_text(size = 12),  legend.key.size = unit(0.5, "cm"), legend.title = element_text(size = 12, colour = "black"),
+        axis.text.x = element_text(angle = 90,hjust=1,colour = "black", size = 12), axis.text = element_text(colour = "black", size = 12), axis.text.y = element_text(size = 13), axis.title.y = element_text(size = 13, color = "black"),
+        panel.grid.major.x = element_blank()) +
+  theme(axis.text.x = element_text(size = 13, colour = "black"),  axis.title.x = element_text(size = 13, color =  "black"))
+
+
+date_tsnep
+
+
+##Figure 2D
+
+virome_met_dt <- merge(virome_dt, meta_dt, by = "sample_ID")
+
+virome_met_dt$City_Site <- str_c(virome_met_dt$City, ", ", virome_met_dt$Site)
+
+city_prev_dt <- virome_met_dt %>%
+  group_by(City) %>%
+  mutate(total_samples = n_distinct(sample_ID)) %>%
+  ungroup() %>%
+  group_by(strain, City, total_samples) %>%
+  summarize(n = n_distinct(sample_ID)) %>%
+  mutate(freq = n / total_samples) %>%
+  select(strain, City, freq) %>%
+  pivot_wider(names_from = City, values_from = freq, values_fill = 0)
+
+tax_table <- virome_dt %>%
+  select(kingdom, phylum, class, order, family, genus, species, strain) %>%
+  distinct()
+
+city_prev_tax_dt <- merge(city_prev_dt, tax_table, by = "strain")
+
+city_long <- city_prev_tax_dt %>%
+  pivot_longer(cols = c(Ahmedabad, Gandhinagar, Rajkot, Vadodara),
+               names_to = "City", values_to = "Prevalence")
+			   
+			   
+avg_prev <- city_long %>%
+  group_by(family, City) %>%
+  summarize(mean_prev = mean(Prevalence, na.rm = TRUE), .groups = "drop")
+
+
+  ggplot(avg_prev, aes(x = reorder(family, +mean_prev), y = mean_prev, color = City)) +
+    geom_segment(aes(xend = family, y = 0, yend = mean_prev),
+                 position = position_dodge(width = 0.8),
+                 color = "gray50") +
+    geom_point(position = position_dodge(width = 0.8), size = 3) +
+    coord_flip() +
+    scale_color_manual(values = c(
+      "Ahmedabad" = "#0070c0",
+      "Gandhinagar" = "#da3030",
+      "Vadodara" = "#354e68",
+      "Rajkot" = "#ffa700"
+    )) +
+    labs( y = "Mean Prevalence" , x = "Family") +
+    theme_bw(base_size = 13) +
+    theme(
+      axis.title.x = element_blank(),
+      axis.text.x = element_text(size = 12, color = "black"),
+      axis.text.y = element_text(size = 11, color = "black"),
+      legend.title = element_text(face = "bold"),
+      legend.text = element_text(size = 13),
+      plot.title = element_text(face = "bold", hjust = 0.5)
+    )
+
+##Figure 2E
+
+virome_table=sprintf("WES-Data.txt")
+metadata_table=sprintf("WES-MetaData-with-Season - Copy.txt")
+
+virome_dt <- fread(virome_table, sep = "\t", header = T )
+meta_dt <- fread(metadata_table, sep = "\t", header = T )
+
+seqname_sID_wide_dt <- 
+  virome_dt %>% 
+  subset(select = c("sequence_name", "sample_ID", "RPKMF")) %>%
+  distinct(sequence_name, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = sequence_name, values_from = RPKMF, values_fill = 0)
+
+sampleID_l <- seqname_sID_wide_dt$sample_ID
+
+seqname_sID_wide_dt <- seqname_sID_wide_dt %>% subset(select = -sample_ID)
+shannon_d <- vegan::diversity(seqname_sID_wide_dt, index = "shannon")
+
+sample_diversity <- cbind(sampleID_l, shannon_d)
+sample_diversity <- as.data.frame(sample_diversity)
+setDT(sample_diversity)
+
+sample_diversity_meta <- merge(sample_diversity, meta_dt, by.x = "sampleID_l", by.y = "sample_ID")
+
+sample_diversity_meta$City_Site <- str_c(sample_diversity_meta$City, ", ", sample_diversity_meta$Site)
+
+sample_diversity_meta$Date <- as.Date(sample_diversity_meta$Date, , "%d-%m-%Y")
+
+sample_diversity_meta$shannon_d <- as.numeric(sample_diversity_meta$shannon_d)
+
+hist(sample_diversity_meta$shannon_d)
+
+library(lme4)
+library(lmerTest)
+
+sample_diversity_meta$Site <- as.character(sample_diversity_meta$Site)
+sample_diversity_meta$Meteorological_Season <- as.character(sample_diversity_meta$Meteorological_Season)
+
+Month_year_order <- c("Sep-23","Oct-23","Nov-23","Dec-23","Jan-24","Feb-24","Mar-24","Apr-24","May-24","Jun-24","Jul-24", "Aug-24", "Sep-24")
+sample_diversity_meta$Month_Year <- factor(sample_diversity_meta$Month_Year, levels = Month_year_order)
+week_year_order <- c("36_2023", "38_2023", "40_2023", "42_2023", "44_2023", "45_2023", "47_2023", "49_2023", "51_2023", "52_2023", "1_2024", "3_2024", "6_2024", "7_2024", "8_2024", "9_2024", "10_2024", "11_2024", "12_2024", "13_2024", "14_2024", "15_2024", "16_2024", "17_2024", "19_2024", "20_2024", "21_2024", "22_2024", "23_2024", "24_2024", "25_2024", "26_2024", "27_2024", "28_2024", "29_2024", "32_2024", "33_2024", "34_2024", "36_2024", "37_2024", "38_2024", "39_2024")
+sample_diversity_meta$Week_Year <- factor(sample_diversity_meta$Week_Year, levels = week_year_order)
+  
+ 
+set.seed(123)
+  model1 <- lmer(shannon_d ~ Meteorological_Season + Month_Year + (1 | City_Site), data = sample_diversity_meta, REML = FALSE)
+  model1
+  set.seed(123)
+  model1 %>% anova()
+  
+
+set.seed(123)
+  model2 <- lmer(shannon_d ~ Meteorological_Season + Week_Year + (1 | City_Site), data = sample_diversity_meta, REML = FALSE)
+  model2
+  set.seed(123)
+  model2 %>% anova()
+  
+  
+library(ggplot2)
+
+sample_diversity_meta$Meteorological_Season <- factor(
+      sample_diversity_meta$Meteorological_Season,
+      levels = c("Monsoon 2023", "Winter 2023-2024", "Summer 2024", "Monsoon 2024")
+    )
+    
+    
+sample_diversity_meta$Meteorological_Season <- factor(
+      sample_diversity_meta$Meteorological_Season,
+      levels = c("Monsoon 2023", "Post Monsoon 2023","Winter 2023-2024", "Summer 2024", "Monsoon 2024")
+    )
+	
+
+ggplot(sample_diversity_meta, aes(x = Month_Year, y = shannon_d, group = Meteorological_Season)) +
+      geom_point(aes(fill = Meteorological_Season), 
+                 color = "black", shape = 21, size = 2, stroke = 0.5) +
+      geom_smooth(method = "loess", se = TRUE, span = 0.5, level = 0.95, 
+                  size = 1, linetype = "solid", colour = "black") +
+      scale_fill_manual(
+        values = c(
+          "Monsoon 2023" = "#f0d77b",
+          "Winter 2023-2024" = "#67b9e9",
+          "Summer 2024" = "#cd4f38",
+          "Monsoon 2024" = "#58a449"
+        )
+      ) +
+      theme_bw() +
+      labs(
+        x = "Month of the Year",
+        y = "Alpha Diversity",
+        title = "Alpha Diversity by Seasons"
+      ) +
+      theme(
+        legend.position = "top",
+        legend.title = element_blank(),
+        axis.title.x = element_text(size = 13, colour = "black"),
+        axis.title.y = element_text(size = 13, color = "black"),
+        legend.text = element_text(size = 13),
+        #legend.key.size = unit(1.5, 'cm'),  # increase size
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 11, color = "black"),
+        axis.text.y = element_text(size = 13, color = "black"),
+        plot.title = element_text(hjust = 0.5, size = 14),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank()
+      )
+
+  
+##Figure 2F
+
+week_labels <- setNames(sub("_.*", "", unique(sample_diversity_meta$Week_Year)),
+                            unique(sample_diversity_meta$Week_Year))
+    ggplot(sample_diversity_meta, aes(x = Week_Year, y = shannon_d, group = Meteorological_Season)) +
+      geom_point(aes(fill = Meteorological_Season), 
+                 color = "black", shape = 21, size = 2, stroke = 0.5) +
+      geom_smooth(method = "loess", se = TRUE, span = 0.5, level = 0.95, 
+                  size = 1, linetype = "solid", colour = "black") +
+      scale_fill_manual(
+        values = c(
+          "Monsoon 2023" = "#f0d77b",
+          "Winter 2023-2024" = "#67b9e9",
+          "Summer 2024" = "#cd4f38",
+          "Monsoon 2024" = "#58a449"
+        )
+      ) +
+       scale_x_discrete(
+        labels = function(x) sub("_.*", "", x)  
+      ) +
+      theme_bw() +
+      labs(
+        x = "",
+        y = "Alpha Diversity",
+        title = "Alpha Diversity by Seasons"
+      ) +
+      theme(
+        legend.position = "top",
+        legend.title = element_blank(),
+        axis.title.x = element_text(size = 13, colour = "black"),
+        axis.title.y = element_text(size = 13, color = "black"),
+        legend.text = element_text(size = 13),
+        #legend.key.size = unit(1.5, 'cm'),  # increase size
+        axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1, size = 10, color = "black"),
+        axis.text.y = element_text(size = 13, color = "black"),
+        plot.title = element_text(hjust = 0.5, size = 14),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank()
+      )
+
+
+##Figure 2G
+
+library(tidyverse)
+
+library(ggplot2)
+library(ggalluvial)
+library(cowplot)
+
+
+df_long <- df %>%
+  pivot_longer(-Family, names_to = "Season", values_to = "Relative_Abundance")
+
+
+df_long$Season <- factor(df_long$Season, levels = c("Monsoon 2023", "Winter 2023-2024", "Summer 2024", "Monsoon 2024"))
+
+library(ggalluvial)
+
+
+my_colors <- c(
+  "#8EC9D0", "#A8C686", "#E9C46A", "#F08080", "#A9A9A9",
+  "#B5896D", "#905D9C", "#4A90A4", "#F4A261", "#E49AB0",
+  "#C86A51", "#9DD6C6", "#B84A4A", "#B3CBE3", "#91B57B",
+  "#EDE0CF", "#D6AEDD"
+)
+
+df_long$Season <- factor(df_long$Season, levels = c(
+  "Monsoon 2023", "Winter 2023-2024", "Summer 2024", "Monsoon 2024"
+))
+
+ggplot(df_long, aes(y = Relative_Abundance, x = Season, fill = Family)) +
+  geom_flow(aes(alluvium = Family), color = "black", alpha = 0.4, curve_type = "sine", width = 0.3) +
+  geom_col(width = 0.3, color = "black", size = 0.1) +
+  scale_fill_manual(values = my_colors) +
+  scale_y_continuous(name = "Relative Abundance", expand = c(0, 0)) +
+  cowplot::theme_minimal_hgrid(font_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(size = 12),
+    axis.title.y = element_text(size = 13, face = "bold"),
+    axis.title.x = element_blank(),
+    axis.text.y = element_text(size = 11),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom", legend.justification = "center",
+    legend.box = "bottom"
+  )

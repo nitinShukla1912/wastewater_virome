@@ -1,0 +1,287 @@
+##Figure 4A
+
+library(ggplot2)
+library(data.table)
+library(stringr)
+library(dplyr)
+library(readxl)
+library(lubridate)
+library(tidyquant)
+library(tidyr)
+library(ggpubr)
+library(rstatix)
+library(wesanderson)
+library(rprojroot)
+
+rota <- read.table('rotavirus.txt', header = T, sep = "\t")
+
+rota$Date <- as.Date(rota$Date, format = "%d-%m-%Y")
+rota %>% 
+  arrange(Date)
+
+Rotavirus_virome_week_dt <- rota %>%
+  mutate(Week = floor_date(Date, "week", week_start = 1)) %>%
+  group_by(Week, City) %>%
+  summarize(
+    RPKMF = mean(RPKMF, na.rm = TRUE),
+    dPCR = mean(dPCR, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+rota %>%  
+  arrange(Date)
+
+rota %>%
+  ggplot(aes(x = dPCR, y = RPKMF, color = City)) +
+  geom_point() + 
+  geom_smooth(se = F, method = "lm") +
+  scale_color_manual(values = c(
+    "Ahmedabad" = "#0070c0",
+    "Gandhinagar" = "#da3030",
+    "Vadodara" = "#354e68",
+    "Rajkot" = "#ffa700"
+  )) +
+  labs(y = "RPKMF from Wastewater", 
+       x = "RNA Copies (dPCR)") +
+  #stat_cor(label.x = 3) +
+  stat_cor(label.x.npc = 0.12, label.y.npc = 0.95) +
+  theme_bw() +
+  theme(
+    text = element_text(color = "black"),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12, color = "black"),
+    plot.title = element_text(size = 16, hjust = 0.5),
+    legend.text = element_text(size = 12),
+    legend.title = element_text(colour = "black", size = 13)
+  )
+
+ggplot() + 
+  geom_point(data = Rotavirus_virome_week_dt, 
+             aes(x=Week, y=6.46*(RPKMF), color="RPKMF"), 
+             alpha = 0.6, size = 1) +
+  geom_point(data = Rotavirus_virome_week_dt, 
+             aes(x=Week, y=(dPCR), color="dPCR"), 
+             alpha = 0.6, size = 1) +
+  geom_ma(data = Rotavirus_virome_week_dt, 
+          aes(x=Week, y=6.46*(RPKMF), color="RPKMF"), 
+          ma_fun = SMA, n = 3, size = 1, linetype = 1) +
+  geom_ma(data = Rotavirus_virome_week_dt, 
+          aes(x=Week, y=(dPCR), color="dPCR"), 
+          ma_fun = SMA, n = 3,  size = 1, linetype = 2) +
+  scale_color_manual(name='Metrics',
+                     breaks=c('RPKMF', 'dPCR'),
+                     values=c('RPKMF'='#057287', 'dPCR'='#5d6e83')) +
+  facet_wrap(vars(City), ncol = 2, scales = "free_y") +
+  labs(x = "Date", title = "") +
+  theme_bw() +
+  scale_y_continuous(name = "RNA Copy (copies/L from dPCR)", 
+                     sec.axis = sec_axis( trans=~./6.46, name="RPKMF from Wastewater", label=scales::comma)
+  ) +
+  scale_x_date(date_labels="%b-%y",date_breaks  ="2 month")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+  theme_bw() +
+  theme(
+    legend.text = element_text(size = 13), 
+    legend.title = element_text(colour = "black", size = 13), 
+    legend.background = element_rect(fill = alpha("white", 0.7)),
+    axis.text.x = element_text(angle = 45, hjust = 1, colour = "black", size = 11), 
+    axis.text = element_text(colour = "black", size = 10), 
+    strip.text = element_text(color = "black", size = 12), 
+    axis.text.y = element_text(size = 12, color = "black"), 
+    axis.title.y = element_text(size = 13, color = "#5d6e83"),
+    axis.title.y.right = element_text(color = "#057287", size = 13),
+    panel.grid.major.x = element_blank(),
+    strip.text.x = element_text(size = 13, colour = "black"), 
+    strip.background = element_rect(color = "black", fill = "#e5e5e5", size = 0.5, linetype = "solid")
+  )
+  
+
+##Figure 4B
+
+ggplot() + 
+  geom_point(data = ahm_raw, 
+             aes(x=Date, y=1000*(RPKMF), color="RPKMF"), 
+             alpha = 0.6, size = 1) +
+  geom_point(data = ahm_raw, 
+             aes(x=Date, y=dPCR, color="dPCR"), 
+             alpha = 0.6, size = 1) +
+  geom_ma(data = ahm_raw, 
+          aes(x=Date, y=1000*(RPKMF), color="RPKMF"), 
+          ma_fun = SMA, n = 3, size = 1, linetype = 1) +
+  geom_ma(data = ahm_raw, 
+          aes(x=Date, y=dPCR, color="dPCR"), 
+          ma_fun = SMA, n = 3,  size = 1, linetype = 2) +
+  scale_color_manual(name='Metrics',
+                     breaks=c('RPKMF', 'dPCR'),
+                     values=c('RPKMF'='#057287', 'dPCR'='#5d6e83')) +
+  #facet_wrap(vars(City), ncol = 2, scales = "free_y") +
+  labs(x = "Date", title = "") +
+  theme_bw() +
+  scale_y_continuous(name = "RNA Copy (copies/L from dPCR)",
+                     sec.axis = sec_axis( trans=~./1000, name="RPKMF from Wastewater", label=scales::comma)
+  ) +
+  scale_x_date(date_labels="%b-%y",date_breaks  ="2 month")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+  theme_bw() +
+  theme(
+    legend.text = element_text(size = 13), 
+    legend.title = element_text(colour = "black", size = 13), 
+    legend.background = element_rect(fill = alpha("white", 0.7)),
+    axis.text.x = element_text(angle = 45, hjust = 1, colour = "black", size = 11), 
+    axis.text = element_text(colour = "black", size = 10), 
+    strip.text = element_text(color = "black", size = 12), 
+    axis.text.y = element_text(size = 12, color = "black"), 
+    axis.title.y = element_text(size = 13, color = "#5d6e83"),
+    axis.title.y.right = element_text(color = "#057287", size = 13),
+    panel.grid.major.x = element_blank(),
+    strip.text.x = element_text(size = 13, colour = "black"), 
+    strip.background = element_rect(color = "black", fill = "#e5e5e5", size = 0.5, linetype = "solid")
+  )
+
+data_clean <- na.omit(ahm_raw)
+
+library(ggpubr)
+ggplot(data_clean, aes(x = dPCR, y = RPKMF)) +
+  geom_point(color = "#cbcacd", size = 2, alpha = 0.5) +  # Blue dots
+  geom_smooth(se = FALSE, method = "lm", color = "#5e548e", linetype = "dashed", size = 1) +  # Red dashed line
+  labs(
+    y = "RPKMF from Wastewater", 
+    x = "RNA Copies (dPCR)"
+  ) +
+  stat_cor(label.x = 3, color = "black", size = 5) +  # Correlation label in black
+  theme_bw() +
+  theme(
+    text = element_text(color = "black"),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    plot.title = element_text(size = 16, hjust = 0.5),
+    legend.position = "none"
+  )
+  
+  
+data_clean <- na.omit(data)
+
+
+library(ggpubr)
+ggplot(data_clean, aes(x = dPCR, y = RPKMF)) +
+  geom_point(color = "#cbcacd", size = 2, alpha = 0.5) +  # Blue dots
+  geom_smooth(se = FALSE, method = "lm", color = "#5e548e", linetype = "dashed", size = 1) +  # Red dashed line
+  labs(
+    y = "RPKMF from Wastewater", 
+    x = "RNA Copies (dPCR)"
+  ) +
+  stat_cor(label.x = 3, color = "black", size = 5) +  # Correlation label in black
+  theme_bw() +
+  theme(
+    text = element_text(color = "black"),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    plot.title = element_text(size = 16, hjust = 0.5),
+    legend.position = "none"
+  )
+  
+ggplot() + 
+  geom_point(data = data, 
+             aes(x=Date, y=2000*(RPKMF), color="RPKMF"), 
+             alpha = 0.6, size = 1) +
+  geom_point(data = data, 
+             aes(x=Date, y=dPCR, color="dPCR"), 
+             alpha = 0.6, size = 1) +
+  geom_ma(data = data, 
+          aes(x=Date, y=2000*(RPKMF), color="RPKMF"), 
+          ma_fun = SMA, n = 3, size = 1, linetype = 1) +
+  geom_ma(data = data, 
+          aes(x=Date, y=dPCR, color="dPCR"), 
+          ma_fun = SMA, n = 3,  size = 1, linetype = 2) +
+  scale_color_manual(name='Metrics',
+                     breaks=c('RPKMF', 'dPCR'),
+                     values=c('RPKMF'='#057287', 'dPCR'='#5d6e83')) +
+  #facet_wrap(vars(City), ncol = 2, scales = "free_y") +
+  labs(x = "Date", title = "") +
+  theme_bw() +
+  scale_y_continuous(name = "RNA Copy (copies/L from dPCR)",
+                     sec.axis = sec_axis( trans=~./2000, name="RPKMF from Wastewater", label=scales::comma)
+  ) +
+  scale_x_date(date_labels="%b-%y",date_breaks  ="2 month")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+  theme_bw() +
+  theme(
+    legend.text = element_text(size = 13), 
+    legend.title = element_text(colour = "black", size = 13), 
+    legend.background = element_rect(fill = alpha("white", 0.7)),
+    axis.text.x = element_text(angle = 45, hjust = 1, colour = "black", size = 11), 
+    axis.text = element_text(colour = "black", size = 10), 
+    strip.text = element_text(color = "black", size = 12), 
+    axis.text.y = element_text(size = 12, color = "black"), 
+    axis.title.y = element_text(size = 13, color = "#5d6e83"),
+    axis.title.y.right = element_text(color = "#057287", size = 13),
+    panel.grid.major.x = element_blank(),
+    strip.text.x = element_text(size = 13, colour = "black"), 
+    strip.background = element_rect(color = "black", fill = "#e5e5e5", size = 0.5, linetype = "solid")
+  )
+
+
+##Figure 4C
+
+# Format date
+df <- df %>%
+  mutate(Date = my(Date))
+
+library(ggplot2)
+library(ggpubr)
+
+ggplot(df, aes(x = Cases, y = RPKMF)) +
+  geom_point(color = "#cbcacd", size = 2, alpha = 0.5) +  # Blue dots
+  geom_smooth(se = FALSE, method = "lm", color = "#5e548e", linetype = "dashed", size = 1) +  # Red dashed line
+  labs(
+    y = "RPKMF from Wastewater", 
+    x = "Monthly Cases"
+  ) +
+  stat_cor(label.x = 3, color = "black", size = 5) +  # Correlation label in black
+  theme_bw() +
+  theme(
+    text = element_text(color = "black"),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    plot.title = element_text(size = 16, hjust = 0.5),
+    legend.position = "none"
+  )
+
+ggplot() + 
+  geom_point(data = df, 
+             aes(x=Date, y=70*(RPKMF), color="RPKMF"), 
+             alpha = 0.6, size = 1) +
+  geom_point(data = df, 
+             aes(x=Date, y=Cases, color="Cases"), 
+             alpha = 0.6, size = 1) +
+  geom_ma(data = df, 
+          aes(x=Date, y=70*(RPKMF), color="RPKMF"), 
+          ma_fun = SMA, n = 2, size = 1, linetype = 1) +
+  geom_ma(data = df, 
+          aes(x=Date, y=Cases, color="Cases"), 
+          ma_fun = SMA, n = 2,  size = 1, linetype = 2) +
+  scale_color_manual(name='Metrics',
+                     breaks=c('RPKMF', 'Cases'),
+                     values=c('RPKMF'='#057287', 'Cases'='#5d6e83')) +
+  labs(x = "Date", title = "") +
+  theme_bw() +
+  scale_y_continuous(name = "Avg. Monthly Cases",
+                     sec.axis = sec_axis( trans=~./70, name="RPKMF from Wastewater", label=scales::comma)
+  ) +
+  scale_x_date(date_labels="%b-%y",date_breaks  ="2 month")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+  theme_bw() +
+  theme(
+    legend.text = element_text(size = 13), 
+    legend.title = element_text(colour = "black", size = 13), 
+    legend.background = element_rect(fill = alpha("white", 0.7)),
+    axis.text.x = element_text(angle = 45, hjust = 1, colour = "black", size = 11), 
+    axis.text = element_text(colour = "black", size = 10), 
+    strip.text = element_text(color = "black", size = 12), 
+    axis.text.y = element_text(size = 12, color = "black"), 
+    axis.title.y = element_text(size = 13, color = "#5d6e83"),
+    axis.title.y.right = element_text(color = "#057287", size = 13),
+    panel.grid.major.x = element_blank(),
+    strip.text.x = element_text(size = 13, colour = "black"), 
+    strip.background = element_rect(color = "black", fill = "#e5e5e5", size = 0.5, linetype = "solid")
+  )

@@ -1,0 +1,745 @@
+##Figure 1C
+
+library(ggplot2)
+library(data.table)
+library(stringr)
+library(dplyr)
+library(lubridate)
+library(wesanderson)
+library(tidyr)
+library(micropan)
+library(rprojroot)
+  
+  
+virome_met_dt <- merge(virome_dt, meta_dt, by = "sample_ID")
+virome_met_dt$City_Site <- str_c(virome_met_dt$City, ", ", virome_met_dt$Site)
+
+
+all_strain_wide <- 
+  virome_met_dt %>% 
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+mat_all_wide <- as.matrix(all_strain_wide)
+all_rare <- rarefaction(mat_all_wide, n.perm = 100)
+
+
+all_rare$avg <- rowMeans(all_rare[,-1], na.rm=TRUE)
+all_rare$max_g <- apply(all_rare[,-1], 1, max)
+all_rare$min_g <- apply(all_rare[,-1], 1, min)
+all_rare$type <- "City"
+all_rare$subset <- "All"
+
+AHM_strain_wide <- 
+  virome_met_dt %>% 
+  filter(City == "Ahmedabad") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+
+AHM_wide <- as.matrix(AHM_strain_wide)
+AHM_rare <- rarefaction(AHM_wide, n.perm = 100)
+
+AHM_rare$avg <- rowMeans(AHM_rare[,-1], na.rm=TRUE)
+AHM_rare$max_g <- apply(AHM_rare[,-1], 1, max)
+AHM_rare$min_g <- apply(AHM_rare[,-1], 1, min)
+AHM_rare$type <- "City"
+AHM_rare$subset <- "Ahmedabad"
+
+GAN_strain_wide <- 
+  virome_met_dt %>% 
+  filter(City == "Gandhinagar") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+
+GAN_wide <- as.matrix(GAN_strain_wide)
+GAN_rare <- rarefaction(AHM_wide, n.perm = 100)
+
+GAN_rare$avg <- rowMeans(GAN_rare[,-1], na.rm=TRUE)
+GAN_rare$max_g <- apply(GAN_rare[,-1], 1, max)
+GAN_rare$min_g <- apply(GAN_rare[,-1], 1, min)
+GAN_rare$type <- "City"
+GAN_rare$subset <- "Gandhinagar"
+
+RAJ_strain_wide <- 
+  virome_met_dt %>% 
+  filter(City == "Rajkot") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+
+RAJ_wide <- as.matrix(RAJ_strain_wide)
+RAJ_rare <- rarefaction(RAJ_wide, n.perm = 100)
+
+RAJ_rare$avg <- rowMeans(RAJ_rare[,-1], na.rm=TRUE)
+RAJ_rare$max_g <- apply(RAJ_rare[,-1], 1, max)
+RAJ_rare$min_g <- apply(RAJ_rare[,-1], 1, min)
+RAJ_rare$type <- "City"
+RAJ_rare$subset <- "Rajkot"
+
+BRD_strain_wide <- 
+  virome_met_dt %>% 
+  filter(City == "Vadodara") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+
+BRD_wide <- as.matrix(BRD_strain_wide)
+BRD_rare <- rarefaction(BRD_wide, n.perm = 100)
+
+BRD_rare$avg <- rowMeans(BRD_rare[,-1], na.rm=TRUE)
+BRD_rare$max_g <- apply(BRD_rare[,-1], 1, max)
+BRD_rare$min_g <- apply(BRD_rare[,-1], 1, min)
+BRD_rare$type <- "City"
+BRD_rare$subset <- "Vadodara"
+
+
+Ambawadi_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Ambawadi") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Ambawadi_wide <- as.matrix(Ambawadi_strain_wide)
+Ambawadi_rare <- rarefaction(Ambawadi_wide, n.perm = 100)
+Ambawadi_rare$avg <- rowMeans(Ambawadi_rare[,-1], na.rm=TRUE)
+Ambawadi_rare$max_g <- apply(Ambawadi_rare[,-1], 1, max)
+Ambawadi_rare$min_g <- apply(Ambawadi_rare[,-1], 1, min)
+Ambawadi_rare$type <- "Site"
+Ambawadi_rare$subset <- "Ambawadi"
+
+Paldi_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Paldi") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Paldi_wide <- as.matrix(Paldi_strain_wide)
+Paldi_rare <- rarefaction(Paldi_wide, n.perm = 100)
+Paldi_rare$avg <- rowMeans(Paldi_rare[,-1], na.rm=TRUE)
+Paldi_rare$max_g <- apply(Paldi_rare[,-1], 1, max)
+Paldi_rare$min_g <- apply(Paldi_rare[,-1], 1, min)
+Paldi_rare$type <- "Site"
+Paldi_rare$subset <- "Paldi"
+
+Maninagar_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Maninagar") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Maninagar_wide <- as.matrix(Maninagar_strain_wide)
+Maninagar_rare <- rarefaction(Maninagar_wide, n.perm = 100)
+Maninagar_rare$avg <- rowMeans(Maninagar_rare[,-1], na.rm=TRUE)
+Maninagar_rare$max_g <- apply(Maninagar_rare[,-1], 1, max)
+Maninagar_rare$min_g <- apply(Maninagar_rare[,-1], 1, min)
+Maninagar_rare$type <- "Site"
+Maninagar_rare$subset <- "Maninagar"
+
+Jamalpur_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Jamalpur") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Jamalpur_wide <- as.matrix(Jamalpur_strain_wide)
+Jamalpur_rare <- rarefaction(Jamalpur_wide, n.perm = 100)
+Jamalpur_rare$avg <- rowMeans(Jamalpur_rare[,-1], na.rm=TRUE)
+Jamalpur_rare$max_g <- apply(Jamalpur_rare[,-1], 1, max)
+Jamalpur_rare$min_g <- apply(Jamalpur_rare[,-1], 1, min)
+Jamalpur_rare$type <- "Site"
+Jamalpur_rare$subset <- "Jamalpur"
+
+Motera_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Motera") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Motera_wide <- as.matrix(Motera_strain_wide)
+Motera_rare <- rarefaction(Motera_wide, n.perm = 100)
+Motera_rare$avg <- rowMeans(Motera_rare[,-1], na.rm=TRUE)
+Motera_rare$max_g <- apply(Motera_rare[,-1], 1, max)
+Motera_rare$min_g <- apply(Motera_rare[,-1], 1, min)
+Motera_rare$type <- "Site"
+Motera_rare$subset <- "Motera"
+
+Vasna_MLD_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Vasna MLD") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Vasna_MLD_wide <- as.matrix(Vasna_MLD_strain_wide)
+Vasna_MLD_rare <- rarefaction(Vasna_MLD_wide, n.perm = 100)
+Vasna_MLD_rare$avg <- rowMeans(Vasna_MLD_rare[,-1], na.rm=TRUE)
+Vasna_MLD_rare$max_g <- apply(Vasna_MLD_rare[,-1], 1, max)
+Vasna_MLD_rare$min_g <- apply(Vasna_MLD_rare[,-1], 1, min)
+Vasna_MLD_rare$type <- "Site"
+Vasna_MLD_rare$subset <- "Vasna MLD"
+
+Pirana_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Pirana") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Pirana_wide <- as.matrix(Pirana_strain_wide)
+Pirana_rare <- rarefaction(Pirana_wide, n.perm = 100)
+Pirana_rare$avg <- rowMeans(Pirana_rare[,-1], na.rm=TRUE)
+Pirana_rare$max_g <- apply(Pirana_rare[,-1], 1, max)
+Pirana_rare$min_g <- apply(Pirana_rare[,-1], 1, min)
+Pirana_rare$type <- "Site"
+Pirana_rare$subset <- "Pirana"
+
+Ranip_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Ranip") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Ranip_wide <- as.matrix(Ranip_strain_wide)
+Ranip_rare <- rarefaction(Ranip_wide, n.perm = 100)
+Ranip_rare$avg <- rowMeans(Ranip_rare[,-1], na.rm=TRUE)
+Ranip_rare$max_g <- apply(Ranip_rare[,-1], 1, max)
+Ranip_rare$min_g <- apply(Ranip_rare[,-1], 1, min)
+Ranip_rare$type <- "Site"
+Ranip_rare$subset <- "Ranip"
+
+Vasna_SPS_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Vasna SPS") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Vasna_SPS_wide <- as.matrix(Vasna_SPS_strain_wide)
+Vasna_SPS_rare <- rarefaction(Vasna_SPS_wide, n.perm = 100)
+Vasna_SPS_rare$avg <- rowMeans(Vasna_SPS_rare[,-1], na.rm=TRUE)
+Vasna_SPS_rare$max_g <- apply(Vasna_SPS_rare[,-1], 1, max)
+Vasna_SPS_rare$min_g <- apply(Vasna_SPS_rare[,-1], 1, min)
+Vasna_SPS_rare$type <- "Site"
+Vasna_SPS_rare$subset <- "Vasna SPS"
+
+Vinzol_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Vinzol") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Vinzol_wide <- as.matrix(Vinzol_strain_wide)
+Vinzol_rare <- rarefaction(Vinzol_wide, n.perm = 100)
+Vinzol_rare$avg <- rowMeans(Vinzol_rare[,-1], na.rm=TRUE)
+Vinzol_rare$max_g <- apply(Vinzol_rare[,-1], 1, max)
+Vinzol_rare$min_g <- apply(Vinzol_rare[,-1], 1, min)
+Vinzol_rare$type <- "Site"
+Vinzol_rare$subset <- "Vinzol"
+
+Atladara_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Atladara") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Atladara_wide <- as.matrix(Atladara_strain_wide)
+Atladara_rare <- rarefaction(Atladara_wide, n.perm = 100)
+Atladara_rare$avg <- rowMeans(Atladara_rare[,-1], na.rm=TRUE)
+Atladara_rare$max_g <- apply(Atladara_rare[,-1], 1, max)
+Atladara_rare$min_g <- apply(Atladara_rare[,-1], 1, min)
+Atladara_rare$type <- "Site"
+Atladara_rare$subset <- "Atladara"
+
+Channi_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Channi") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Channi_wide <- as.matrix(Channi_strain_wide)
+Channi_rare <- rarefaction(Channi_wide, n.perm = 100)
+Channi_rare$avg <- rowMeans(Channi_rare[,-1], na.rm=TRUE)
+Channi_rare$max_g <- apply(Channi_rare[,-1], 1, max)
+Channi_rare$min_g <- apply(Channi_rare[,-1], 1, min)
+Channi_rare$type <- "Site"
+Channi_rare$subset <- "Channi"
+
+Jaspur_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Jaspur") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Jaspur_wide <- as.matrix(Jaspur_strain_wide)
+Jaspur_rare <- rarefaction(Jaspur_wide, n.perm = 100)
+Jaspur_rare$avg <- rowMeans(Jaspur_rare[,-1], na.rm=TRUE)
+Jaspur_rare$max_g <- apply(Jaspur_rare[,-1], 1, max)
+Jaspur_rare$min_g <- apply(Jaspur_rare[,-1], 1, min)
+Jaspur_rare$type <- "Site"
+Jaspur_rare$subset <- "Jaspur"
+
+Kudasan_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Kudasan") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Kudasan_wide <- as.matrix(Kudasan_strain_wide)
+Kudasan_rare <- rarefaction(Kudasan_wide, n.perm = 100)
+Kudasan_rare$avg <- rowMeans(Kudasan_rare[,-1], na.rm=TRUE)
+Kudasan_rare$max_g <- apply(Kudasan_rare[,-1], 1, max)
+Kudasan_rare$min_g <- apply(Kudasan_rare[,-1], 1, min)
+Kudasan_rare$type <- "Site"
+Kudasan_rare$subset <- "Kudasan"
+
+Raysan_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Raysan") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Raysan_wide <- as.matrix(Raysan_strain_wide)
+Raysan_rare <- rarefaction(Raysan_wide, n.perm = 100)
+Raysan_rare$avg <- rowMeans(Raysan_rare[,-1], na.rm=TRUE)
+Raysan_rare$max_g <- apply(Raysan_rare[,-1], 1, max)
+Raysan_rare$min_g <- apply(Raysan_rare[,-1], 1, min)
+Raysan_rare$type <- "Site"
+Raysan_rare$subset <- "Raysan"
+
+Sargasan_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Sargasan") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Sargasan_wide <- as.matrix(Sargasan_strain_wide)
+Sargasan_rare <- rarefaction(Sargasan_wide, n.perm = 100)
+Sargasan_rare$avg <- rowMeans(Sargasan_rare[,-1], na.rm=TRUE)
+Sargasan_rare$max_g <- apply(Sargasan_rare[,-1], 1, max)
+Sargasan_rare$min_g <- apply(Sargasan_rare[,-1], 1, min)
+Sargasan_rare$type <- "Site"
+Sargasan_rare$subset <- "Sargasan"
+
+Vavol_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Vavol") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Vavol_wide <- as.matrix(Vavol_strain_wide)
+Vavol_rare <- rarefaction(Vavol_wide, n.perm = 100)
+Vavol_rare$avg <- rowMeans(Vavol_rare[,-1], na.rm=TRUE)
+Vavol_rare$max_g <- apply(Vavol_rare[,-1], 1, max)
+Vavol_rare$min_g <- apply(Vavol_rare[,-1], 1, min)
+Vavol_rare$type <- "Site"
+Vavol_rare$subset <- "Vavol"
+
+Gajarwadi_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Gajarwadi") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Gajarwadi_wide <- as.matrix(Gajarwadi_strain_wide)
+Gajarwadi_rare <- rarefaction(Gajarwadi_wide, n.perm = 100)
+Gajarwadi_rare$avg <- rowMeans(Gajarwadi_rare[,-1], na.rm=TRUE)
+Gajarwadi_rare$max_g <- apply(Gajarwadi_rare[,-1], 1, max)
+Gajarwadi_rare$min_g <- apply(Gajarwadi_rare[,-1], 1, min)
+Gajarwadi_rare$type <- "Site"
+Gajarwadi_rare$subset <- "Gajarwadi"
+
+Raiyadhar_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Raiyadhar") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Raiyadhar_wide <- as.matrix(Raiyadhar_strain_wide)
+Raiyadhar_rare <- rarefaction(Raiyadhar_wide, n.perm = 100)
+Raiyadhar_rare$avg <- rowMeans(Raiyadhar_rare[,-1], na.rm=TRUE)
+Raiyadhar_rare$max_g <- apply(Raiyadhar_rare[,-1], 1, max)
+Raiyadhar_rare$min_g <- apply(Raiyadhar_rare[,-1], 1, min)
+Raiyadhar_rare$type <- "Site"
+Raiyadhar_rare$subset <- "Raiyadhar"
+
+Kothariya_Near_NH_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Kothariya Near NH") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Kothariya_Near_NH_wide <- as.matrix(Kothariya_Near_NH_strain_wide)
+Kothariya_Near_NH_rare <- rarefaction(Kothariya_Near_NH_wide, n.perm = 100)
+Kothariya_Near_NH_rare$avg <- rowMeans(Kothariya_Near_NH_rare[,-1], na.rm=TRUE)
+Kothariya_Near_NH_rare$max_g <- apply(Kothariya_Near_NH_rare[,-1], 1, max)
+Kothariya_Near_NH_rare$min_g <- apply(Kothariya_Near_NH_rare[,-1], 1, min)
+Kothariya_Near_NH_rare$type <- "Site"
+Kothariya_Near_NH_rare$subset <- "Kothariya Near NH"
+
+Kothariya_old_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Kothariya old") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Kothariya_old_wide <- as.matrix(Kothariya_old_strain_wide)
+Kothariya_old_rare <- rarefaction(Kothariya_old_wide, n.perm = 100)
+Kothariya_old_rare$avg <- rowMeans(Kothariya_old_rare[,-1], na.rm=TRUE)
+Kothariya_old_rare$max_g <- apply(Kothariya_old_rare[,-1], 1, max)
+Kothariya_old_rare$min_g <- apply(Kothariya_old_rare[,-1], 1, min)
+Kothariya_old_rare$type <- "Site"
+Kothariya_old_rare$subset <- "Kothariya old"
+
+Popatpara_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Popatpara") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Popatpara_wide <- as.matrix(Popatpara_strain_wide)
+Popatpara_rare <- rarefaction(Popatpara_wide, n.perm = 100)
+Popatpara_rare$avg <- rowMeans(Popatpara_rare[,-1], na.rm=TRUE)
+Popatpara_rare$max_g <- apply(Popatpara_rare[,-1], 1, max)
+Popatpara_rare$min_g <- apply(Popatpara_rare[,-1], 1, min)
+Popatpara_rare$type <- "Site"
+Popatpara_rare$subset <- "Popatpara"
+
+Raiya_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Raiya") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Raiya_wide <- as.matrix(Raiya_strain_wide)
+Raiya_rare <- rarefaction(Raiya_wide, n.perm = 100)
+Raiya_rare$avg <- rowMeans(Raiya_rare[,-1], na.rm=TRUE)
+Raiya_rare$max_g <- apply(Raiya_rare[,-1], 1, max)
+Raiya_rare$min_g <- apply(Raiya_rare[,-1], 1, min)
+Raiya_rare$type <- "Site"
+Raiya_rare$subset <- "Raiya"
+
+Tarsali_strain_wide <- 
+  virome_met_dt %>% 
+  filter(Site == "Tarsali") %>%
+  group_by(strain, sample_ID) %>%
+  summarize(RPKMF = mean(RPKMF)) %>%
+  distinct(strain, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = strain, values_from = RPKMF, values_fill = 0) %>%
+  subset(select = -sample_ID)
+Tarsali_wide <- as.matrix(Tarsali_strain_wide)
+Tarsali_rare <- rarefaction(Tarsali_wide, n.perm = 100)
+Tarsali_rare$avg <- rowMeans(Tarsali_rare[,-1], na.rm=TRUE)
+Tarsali_rare$max_g <- apply(Tarsali_rare[,-1], 1, max)
+Tarsali_rare$min_g <- apply(Tarsali_rare[,-1], 1, min)
+Tarsali_rare$type <- "Site"
+Tarsali_rare$subset <- "Tarsali"
+
+
+multi_rare_site <- rbind(Ambawadi_rare, Paldi_rare, Maninagar_rare, Jamalpur_rare, Motera_rare, Vasna_MLD_rare, Pirana_rare, Ranip_rare, Vasna_SPS_rare, Vinzol_rare, Jaspur_rare, Kudasan_rare, Raysan_rare, Sargasan_rare, Vavol_rare, Atladara_rare, Channi_rare, Gajarwadi_rare, Tarsali_rare, Raiyadhar_rare, Kothariya_Near_NH_rare, Kothariya_old_rare, Popatpara_rare, Raiya_rare)
+
+scale_color_manual(values = c(
+  "Ahmedabad" = "#0070c0",
+  "Gandhinagar" = "#da3030",
+  "Vadodara" = "#354e68",
+  "Rajkot" = "#ffa700"
+))
+
+custom_scale <- wes_palette("Darjeeling1", 5, type = "continuous")
+
+allg <- ggplot(all_rare, aes(x=Genome,y=avg)) +
+  geom_ribbon(aes(x=Genome,ymin=min_g,ymax=max_g,fill=subset),alpha=0.2) +
+  geom_line(aes(x=Genome,y=avg,col=subset), size = 1.2, alpha = 0.95) +
+  xlab("Samples from wastewater") + 
+  ylab("Number of Unique Strains Detected") +
+  facet_wrap(vars(type), nrow=1, scales = "free_x", labeller = labeller(type = c("City" = "Total Samples"))) +  
+  scale_fill_manual(values = c("All" = "black")) + 
+  scale_color_manual(values = c("All" = "black")) + 
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position = "none") + theme(axis.text.x = element_text(size=13),
+                                         strip.text = element_text(size=13)) + theme(axis.text.x = element_text(size = 13, colour = "black"),axis.text.y = element_text(size = 13, colour = "black"), axis.title.x = element_text(size = 13, color =  "black"), axis.title.y = element_text(size = 13, color = "black"), strip.background = element_rect(color="black", fill="#e5e5e5", size=0.5, linetype="solid"))
+
+allg 
+
+multi_rare <- rbind(AHM_rare, GAN_rare, BRD_rare, RAJ_rare)
+cityg <- ggplot(multi_rare, aes(x=Genome,y=avg)) +
+  #geom_ribbon(aes(x=Genome,ymin=min_g,ymax=max_g,fill=subset),alpha=0.2) +
+  geom_line(aes(x=Genome,y=avg,col=subset), size = 1.2, alpha = 0.95) +
+  xlab("Samples from wastewater") + 
+  ylab("Number of Unique Strains Detected") +
+  facet_wrap(vars(type), nrow=1, scales = "free_x") +  
+  scale_fill_manual(values = c("Ahmedabad" = "#0070c0",
+    "Gandhinagar" = "#da3030",
+    "Vadodara" = "#354e68",
+    "Rajkot" = "#ffa700")) +
+  scale_color_manual(values = c(
+    "Ahmedabad" = "#0070c0",
+    "Gandhinagar" = "#da3030",
+    "Vadodara" = "#354e68",
+    "Rajkot" = "#ffa700"), name = NULL) +
+  theme_bw() + 
+  theme(legend.text = element_text(size = 13), legend.title = element_text(colour = "black", size = 13), legend.position = c(0.65, 0.45),
+        legend.background = element_rect(fill = "white"),  # Semi-transparent background
+        axis.text.x = element_text(angle = 90,hjust=1,colour = "black", size = 12), axis.text = element_text(colour = "black", size = 10), strip.text = element_text(color = "black", size = 12), axis.text.y = element_text(size = 13), axis.title.y = element_text(size = 13, color = "black"),
+        panel.grid.major.x = element_blank()) +
+  theme(strip.text.x = element_text(size = 13, colour = "black"), strip.background = element_rect(color="black", fill="#e5e5e5", size=0.5, linetype="solid"), axis.text.x = element_text(size = 13, colour = "black"),  axis.title.x = element_text(size = 13, color =  "black"))
+
+  
+cityg
+
+virome_met_dt %>% distinct(Site)
+
+pal <- wes_palette("Darjeeling1", 24, type = "continuous")
+
+siteg <-  ggplot(multi_rare_site, aes(x=Genome,y=avg)) +
+  #geom_ribbon(aes(x=Genome,ymin=min_g,ymax=max_g,fill=subset),alpha=0.2) +
+  geom_line(aes(x=Genome,y=avg,col=subset), size = 1.2, alpha = 0.95) +
+  xlab("Samples from wastewater") + 
+  ylab("Number of Unique Strains Detected") +
+  facet_wrap(vars(type), nrow=1, scales = "free_x") +  
+  scale_fill_manual(values = pal) +
+  scale_color_manual(values = pal, name = NULL) +
+  theme_bw() + 
+  theme(legend.text = element_text(size = 10), legend.position = c(0.65, 0.15), legend.key.size = unit(0.2, "cm"),
+        legend.background = element_rect(fill = "white"),  # Semi-transparent background
+        #        legend.box.background = element_rect(color = "black", size = 1.2),
+        axis.text.x = element_text(angle = 90,hjust=1,colour = "black", size = 12), axis.text = element_text(colour = "black", size = 10), strip.text = element_text(color = "black", size = 12), axis.text.y = element_text(size = 13), axis.title.y = element_text(size = 13, color = "black"),
+        panel.grid.major.x = element_blank()) +
+  theme(strip.text.x = element_text(size = 13, colour = "black"), strip.background = element_rect(color="black", fill="#e5e5e5", size=0.5, linetype="solid"), axis.text.x = element_text(size = 13, colour = "black"),  axis.title.x = element_text(size = 13, color =  "black"))
+
+
+siteg
+
+
+gridExtra::grid.arrange(allg, cityg, siteg, ncol = 3)
+
+
+##Figure 1D
+
+
+library(ggplot2)
+library(data.table)
+library(stringr)
+library(dplyr)
+library(lubridate)
+library(tidyr)
+library(rprojroot)
+library(vegan)
+library(wesanderson)
+
+
+seqname_sID_wide_dt <- 
+  virome_dt %>% 
+  subset(select = c("sequence_name", "sample_ID", "RPKMF")) %>%
+  distinct(sequence_name, sample_ID, RPKMF) %>%
+  pivot_wider(names_from = sequence_name, values_from = RPKMF, values_fill = 0)
+
+sampleID_l <- seqname_sID_wide_dt$sample_ID
+
+seqname_sID_wide_dt <- seqname_sID_wide_dt %>% subset(select = -sample_ID)
+
+Calculate shannon diversity
+
+shannon_d <- vegan::diversity(seqname_sID_wide_dt, index = "shannon")
+
+sample_diversity <- cbind(sampleID_l, shannon_d)
+sample_diversity <- as.data.frame(sample_diversity)
+setDT(sample_diversity)
+
+sample_diversity_meta <- merge(sample_diversity, meta_dt, by.x = "sampleID_l", by.y = "sample_ID")
+sample_diversity_meta$City_Site <- str_c(sample_diversity_meta$City, ", ", sample_diversity_meta$Site)
+
+sample_diversity_meta$Date <- as.Date(sample_diversity_meta$Date, , "%m-%d-%Y")
+
+sample_diversity_meta$shannon_d <- as.numeric(sample_diversity_meta$shannon_d)
+
+plot diversity by site
+
+library(RColorBrewer)
+nb.cols <- 24
+mycolors <- colorRampPalette(brewer.pal(8, "Set1"))(nb.cols)
+
+sample_diversity_meta %>% 
+  ggplot(aes(x = Site, y = shannon_d, fill = City_Site)) +
+  geom_boxplot(outlier.size = 0) +
+  geom_point(pch = 2, position = position_jitterdodge(), color = "black") +
+  #scale_fill_manual(values = custom_scale) +
+  #scale_fill_manual(values = custom_scale[c(3:6,8:21)]) + 
+  #scale_fill_manual(values = c("#ff9b34","#ff693a", "#e14076", "#4b383a", "#00a8bb", "#99e2b4", "#ffe66d", "#ff6b6b", "#4ecdc4", "#1a535c", "#eef0eb", "#7ae582", "#a5be00", "#fdc921", "#b4b8ab", "#054a91")) + # Adding 16 unique colors based on 16 sites in 3 diiferent cities
+  scale_fill_manual(values = mycolors) + 
+  #scale_fill_manual(values = site_palette_gra) + 
+  facet_wrap(vars(City), scales = "free_x") +
+  theme_bw() +
+  labs(x = "", y = "Shannon Diversity") +
+  theme(panel.grid.major = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position = "Off") + theme(axis.text.x = element_text(size=13),
+                                         strip.text = element_text(size=13)) + theme(axis.text.x = element_text(size = 13, colour = "black"),axis.text.y = element_text(size = 13, colour = "black"), axis.title.x = element_text(size = 13, color =  "black"), axis.title.y = element_text(size = 13, color = "black"), strip.background = element_rect(color="black", fill="#e5e5e5", size=0.5, linetype="solid"))
+
+
+
+##Figure 1E
+
+library(ggplot2)
+library(data.table)
+library(stringr)
+library(dplyr)
+library(lubridate)
+library(wesanderson)
+library(tidyr)
+library(micropan)
+library(rprojroot)
+
+virome_met_dt <- merge(virome_dt, meta_dt, by = "sample_ID")
+virome_met_dt$City_Site <- str_c(virome_met_dt$City, ", ", virome_met_dt$Site)
+
+
+virome_met_dt <- virome_met_dt %>%
+  mutate(coverage = covered_bases/reference_length) %>%
+  mutate(cov_category = case_when(
+    coverage >= 0.9 ~ "Over 90%",
+    coverage < 0.9 & coverage >= 0.5 ~ "50% - 90%",
+    coverage < 0.5 & coverage >= 0.1 ~ "10% - 50%",
+    TRUE ~ "Less"
+  ))
+  
+
+mean_category <- virome_met_dt %>%
+  group_by(sample_ID, cov_category) %>%
+  summarize(seqs = n_distinct(sequence_name)) %>%
+  filter(cov_category != "Less") %>%
+  group_by(cov_category) %>%
+  summarize(mean_seqs_per_sample = mean(seqs))  # Compute mean
+  
+custom_scale <- wes_palette("Darjeeling1", 3, type = "continuous")
+
+
+violinp <- virome_met_dt %>%
+  group_by(sample_ID, cov_category) %>%
+  summarize(seqs = n_distinct(sequence_name)) %>%
+  filter(cov_category != "Less") %>%
+  ggplot(aes(x = cov_category, y = seqs, fill = cov_category)) +
+  geom_jitter(aes(color = cov_category), width = 0.2, alpha = 0.3) +  # Jitter points
+  
+  geom_violin(alpha = 0.5, color = "grey20", draw_quantiles = c(0.5)) +
+  scale_fill_manual(values = custom_scale) +
+  scale_color_manual(values = custom_scale) +
+  geom_text(data = mean_category, 
+            aes(x = cov_category, y = mean_seqs_per_sample + 2, 
+                label = paste("", round(mean_seqs_per_sample, 1))), 
+            fontface = "bold", size = 5, color = "black") +
+  theme_bw() +
+  labs(x = "Coverage Category",
+       y = "Number of Viral Genomes/Segments per Sample") +
+  
+  theme(legend.position = "none", axis.text = element_text(size = 13, colour = "black"), axis.title.x = element_text(size = 14, colour = "black"), axis.title.y = element_text(size = 14, colour = "black"),
+        axis.text.x = element_text(size = 13, colour = "black"),
+        axis.text.y = element_text(size = 13, colour = "black"),
+        strip.text = element_text(size = 13))
+
+
+violinp
+
+
+##Figure 1G
+
+library(ggplot2)
+library(data.table)
+library(stringr)
+library(dplyr)
+library(lubridate)
+library(wesanderson)
+library(tidyr)
+library(micropan)
+library(rprojroot)
+virome_met_dt <- merge(virome_dt, meta_dt, by = "sample_ID")
+
+virome_met_dt$City_Site <- str_c(virome_met_dt$City, ", ", virome_met_dt$Site)
+
+median_strains <- virome_met_dt %>%
+  group_by(sample_ID, City_Site) %>%
+  summarize(strains = n_distinct(strain)) %>%
+  group_by(City_Site) %>%
+  summarize(median_strains = median(strains))
+
+median_strains
+strainsp <- virome_met_dt %>%
+  group_by(sample_ID, City_Site) %>%
+  summarize(strains = n_distinct(strain)) %>%
+  ggplot(aes(x = strains, fill = City_Site)) +
+  geom_density(alpha = 0.8, color = "black") +
+  geom_rug() +
+  scale_fill_manual(values = mycolors) +
+  
+  geom_vline(data = median_strains, aes(xintercept = median_strains), size = 0.6, linetype = "dashed") +
+  
+  geom_text(data = median_strains, aes(x = median_strains - 5, y = 0.02, label = median_strains), 
+            angle = 90, vjust = -0.5, hjust = 1, size = 4.5, fontface = "bold") +
+  
+  facet_wrap(vars(City_Site), strip.position = "top", labeller = label_wrap_gen(width = 20)) +
+  
+  labs(x = "Strains detected per sample") +
+  theme_void() + 
+  theme(legend.position = "none",
+        axis.text.x = element_text(size = 13),
+        strip.text = element_text(size = 13, hjust = 0.5, vjust = 1), 
+        axis.title.x = element_text(size = 13),
+        plot.margin = margin(1, 1, 1, 1, "cm")) 
+strainsp
+
+
+

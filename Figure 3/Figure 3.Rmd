@@ -1,0 +1,280 @@
+##Figure 3A
+
+library(ggplot2)
+library(data.table)
+library(stringr)
+library(dplyr)
+library(readxl)
+library(lubridate)
+library(tidyquant)
+library(tidyr)
+library(ggpubr)
+library(rstatix)
+library(rprojroot)
+library(wesanderson)
+
+
+virome_met_dt <- merge(virome_dt, meta_dt, by = "sample_ID")
+virome_met_dt$City_Site <- str_c(virome_met_dt$City, ", ", virome_met_dt$Site)
+virome_met_dt$Date <- as.Date(virome_met_dt$Date, format = "%d-%m-%Y")
+select_dt <- virome_met_dt %>%
+      filter(species %in% c("Rotavirus A Human", "Norwalk virus", "Betapolyomavirus secuhominis", "Betapolyomavirus hominis", 
+                            "Hepatovirus A","Human mastadenovirus A", "Human mastadenovirus B","Influenza A virus",
+                            "Human respirovirus 1","Human respirovirus 3","Severe acute respiratory syndrome-related coronavirus", "Human immunodeficiency virus 1"
+                          )) %>%
+      mutate(Fortnight = floor_date(Date - days(day(Date) %% 14), unit = "day")) %>%
+      group_by(sample_ID, City, Fortnight, species) %>%
+      summarize(RPKMF = sum(RPKMF), .groups = "drop") %>%
+      group_by(species, City) %>%
+      mutate(rel_ab = RPKMF / sum(RPKMF)) %>%
+      ungroup()
+    
+movp <- select_dt %>%
+      group_by(Fortnight, City, species) %>%
+      summarize(rel_ab = sum(rel_ab),
+                RPKMF = sum(RPKMF), .groups = "drop") %>%
+      complete(Fortnight, City, species, fill = list(rel_ab = 0, RPKMF = 0)) %>%
+      mutate(species = gsub("Rotavirus A Human", "Rotavirus A Human", species),
+            #species = gsub("Rotavirus A", "Rotavirus A", species),
+             species = gsub("Norwalk virus", "Noroviruses", species),
+             species = gsub("Betapolyomavirus secuhominis", "JC polyomavirus", species),
+             species = gsub("Betapolyomavirus hominis", "BK polyomavirus", species),
+             species = gsub("Hepatovirus A", "Hepatitis A Virus", species),
+             species = gsub("Human mastadenovirus A", "Human mastadenovirus A", species),
+             species = gsub("Human mastadenovirus B", "Human mastadenovirus B", species),
+             species = gsub("Influenza A virus", "Influenza A virus", species),
+             species = gsub("Human respirovirus 1", "Human Parainfluenza Virus 1", species),
+             species = gsub("Human respirovirus 3", "Human Parainfluenza Virus 3", species),
+             species = gsub("Severe acute respiratory syndrome-related coronavirus", "SARS-CoV2", species),
+             species = gsub("Human immunodeficiency virus 1", "HIV-1", species)) %>%
+      ggplot(aes(x = Fortnight, y = RPKMF, color = City)) +
+      geom_ma(ma_fun = SMA, n = 3, linetype = "solid", size = 0.8, alpha = 0.9) +
+      scale_x_date(date_breaks = "2 month", date_labels = "%b-%y") +  # <- Updated here
+      scale_color_manual(values = c(
+        "Ahmedabad" = "#0070c0",
+        "Gandhinagar" = "#da3030",
+        "Vadodara" = "#354e68",
+        "Rajkot" = "#ffa700"
+      )) +
+      facet_wrap(vars(species), scales = "free_y", labeller = label_wrap_gen()) +
+      labs(x = "Date (Fortnightly)", y = "RPKMF") +
+      theme_bw() +
+      theme(
+        legend.text = element_text(size = 13), 
+        legend.title = element_text(colour = "black", size = 13), 
+        legend.background = element_rect(fill = alpha("white", 0.7)),
+        axis.text.x = element_text(angle = 45, hjust = 1, colour = "black", size = 11), 
+        axis.text = element_text(colour = "black", size = 10), 
+        strip.text = element_text(color = "black", size = 12), 
+        axis.text.y = element_text(size = 13), 
+        axis.title.y = element_text(size = 13, color = "black"),
+        panel.grid.major.x = element_blank(),
+        strip.text.x = element_text(size = 13, colour = "black"), 
+        strip.background = element_rect(color = "black", fill = "#e5e5e5", size = 0.5, linetype = "solid")
+      )
+    
+    movp
+	
+	
+##Figure 3B
+heatp <- virome_met_dt %>%
+  filter(species %in% c("Norwalk virus", "Enterovirus D", "Rotavirus A", 
+                        "Influenza A virus", 
+                        "Severe acute respiratory syndrome-related coronavirus", 
+                        "Respiratory syncytial virus", 
+                        "Hepatovirus A", "Astrovirus MLB1",
+                        "Human respirovirus 1", "Human respirovirus 3", 
+                        "Enterovirus C", "Vesiculovirus indiana", "Human immunodeficiency virus 1",
+                        "Mumps orthorubulavirus", "Measles morbillivirus",
+                        "Rhinovirus A")) %>%
+  mutate(Month = floor_date(Date, "month"), FDate = format(Month, "%b-%Y")) %>%
+ # filter(Month >= as.Date("2023-09-01") & Month <= as.Date("2024-09-30")) %>%  # Filtering here
+  group_by(sample_ID, City, Site, Month, species) %>%
+  summarize(RPKMF = sum(RPKMF)) %>%
+  ungroup() %>%
+  group_by(species) %>%
+  mutate(rel_ab = RPKMF/sum(RPKMF)) %>%
+  ungroup() %>%
+  group_by(Month, City, Site, species) %>%
+  summarize(rel_ab = sum(rel_ab),
+            RPKMF = sum(RPKMF)) %>%
+  ungroup() %>%
+  complete(Month, Site, species, fill = list(rel_ab = 0, RPKMF = 0)) %>%
+  filter(City != "NA") %>%
+  mutate(species = gsub("Enterovirus D", "Enterovirus D68", species),
+         species = gsub("Norwalk virus", "Noroviruses", species),
+         species = gsub("Severe acute respiratory syndrome-related coronavirus",
+                        "SARS-CoV2", species),
+         species = gsub("Hepatovirus A", "Hepatitis A Virus", species),
+         species = gsub("Human respirovirus 3", "Human Parainfluenza Virus 3", species),
+         species = gsub("Human respirovirus 1", "Human Parainfluenza Virus 1", species),
+         #species = gsub("Enterovirus C", "Human poliovirus strain Sabin 1", species),
+         species = gsub("Enterovirus C", "Enterovirus C", species),
+         species = gsub("Vesiculovirus indiana", "Vesicular stomatitis Indiana virus", species),
+         species = gsub("Human immunodeficiency virus 1", "HIV-1", species),
+         species = gsub("Mumps orthorubulavirus", "Mumps orthorubulavirus", species), 
+         species = gsub("Measles morbillivirus", "Measles virus", species)) %>%
+  
+  ggplot(aes(x=Month, y=species, fill=log10(RPKMF))) +
+  geom_tile(color = "black") +
+  scale_fill_gradient(low = '#3e387a', high = '#fe715e', 
+                      na.value = 'white') +
+  facet_wrap(vars(City), nrow = 3, scales = "free_x") +
+  theme_bw() +
+  scale_x_date(
+    date_breaks = "months",
+    date_labels = "%b-%y",
+    limits = as.Date(c("2023-08-15", "2024-09-30"), by = "1 month"),  # Exact limits
+    expand = c(0, 0)  # Remove extra space
+  ) + 
+  labs(x = "Date", y = "") +
+  theme(axis.text.x = element_text(angle = 45,hjust=1,colour = "black", size = 11), 
+        axis.text = element_text(colour = "black"), 
+        strip.text = element_text(color = "black", size = 13), 
+        axis.text.y = element_text(size = 12),
+        panel.grid.major.x = element_blank()) +
+  theme(strip.text.x = element_text(size = 13, colour = "black"), 
+        strip.background = element_rect(color="black", fill="#e5e5e5", size=0.5, linetype="solid"))
+
+heatp
+
+
+##Figure 3C
+heatp2 <- virome_met_dt %>%
+    filter(species %in% c("Human mastadenovirus A", "Human mastadenovirus B", "Human mastadenovirus C", 
+                          "Human mastadenovirus D", 
+                          "Primate bocaparvovirus 1", 
+                          "Primate bocaparvovirus 2", "Human mastadenovirus F", 
+                          "Adeno-associated dependoparvovirus A", "Adeno-associated dependoparvovirus B", 
+                          "Human mastadenovirus E", "Betapolyomavirus secuhominis", 
+                          "Mupapillomavirus 1" , "Betapolyomavirus hominis")) %>%
+    # mutate(Week = floor_date(Date, "weeks", week_start = 1)) %>%
+    mutate(Month = floor_date(Date, "month"), FDate = format(Month, "%b-%Y")) %>%
+    group_by(sample_ID, City, Site, Month, species) %>%
+    summarize(RPKMF = sum(RPKMF)) %>%
+    ungroup() %>%
+    #group_by(species, Site) %>%
+    group_by(species) %>%
+    mutate(rel_ab = RPKMF/sum(RPKMF)) %>%
+    ungroup() %>%
+    group_by(Month, City, Site, species) %>%
+    summarize(rel_ab = sum(rel_ab),
+              RPKMF = sum(RPKMF)) %>%
+    ungroup() %>%
+    complete(Month, Site, species, fill = list(rel_ab = 0, RPKMF = 0)) %>%
+    filter(City != "NA") %>%
+    mutate(species = gsub("Human mastadenovirus A", "Human mastadenovirus A", species),
+           species = gsub("Human mastadenovirus B", "Human mastadenovirus B", species),
+           species = gsub("Human mastadenovirus C", "Human mastadenovirus C", species),
+           species = gsub("Human mastadenovirus D", "Human mastadenovirus D", species),
+           species = gsub("Primate bocaparvovirus 1", "Primate bocaparvovirus 1", species),
+           species = gsub("Primate bocaparvovirus 2","Primate bocaparvovirus 2", species),
+           species = gsub("Human mastadenovirus F", "Human mastadenovirus F", species),
+           species = gsub("Adeno-associated dependoparvovirus A", "Adeno-associated dependoparvovirus A", species),
+           species = gsub("Adeno-associated dependoparvovirus B", "Adeno-associated dependoparvovirus B", species),
+           species = gsub("Human mastadenovirus E", "Human mastadenovirus E", species),
+           species = gsub("Alphapapillomavirus 6", "Alphapapillomavirus 6", species), 
+           species = gsub("Betapolyomavirus secuhominis", "JC polyomavirus", species), 
+           species = gsub("Hepatitis B virus", "Hepatitis B virus", species),
+           species = gsub("Betapolyomavirus hominis", "BK polyomavirus", species),
+           species = gsub("Alphapapillomavirus 7","Alphapapillomavirus 7", species)) %>%
+    ggplot(aes(x=Month, y=species, fill=log10(RPKMF))) +
+    geom_tile(color = "black") +
+    scale_fill_gradient(low = '#3e387a', high = '#fe715e', 
+                        na.value = 'white') +
+    facet_wrap(vars(City), nrow = 3, scales = "free_x") +
+    theme_bw() +
+    scale_x_date(
+      date_breaks = "months",
+      date_labels = "%b-%y",
+      limits = as.Date(c("2023-08-15", "2024-09-30"), by = "1 month"),  # Exact limits
+      expand = c(0, 0)  # Remove extra space
+    ) + 
+    labs(x = "Date", y = "") +
+    theme(axis.text.x = element_text(angle = 45,hjust=1,colour = "black", size = 11), 
+          axis.text = element_text(colour = "black"), 
+          strip.text = element_text(color = "black", size = 13), 
+          axis.text.y = element_text(size = 12),
+          panel.grid.major.x = element_blank()) +
+    theme(strip.text.x = element_text(size = 13, colour = "black"), 
+          strip.background = element_rect(color="black", fill="#e5e5e5", size=0.5, linetype="solid"))
+  
+  heatp2
+  
+##Figure S6
+
+
+  library(dplyr)
+  library(tidyr)
+  library(lubridate)
+  library(ggplot2)
+  
+  heatp2_animals <- virome_met_dt %>%
+    filter(species %in% c(
+      "Pigeon circovirus",
+      "Equine rotavirus",
+      "Carnivore protoparvovirus 1",
+      "Beak and feather disease virus",
+      "Feline rotavirus",
+      "Mammalian orthoreovirus",
+      "Porcine stool-associated circular virus 4",
+      "Ovine mastadenovirus B",
+      "Chicken anemia virus",
+      "Betapolyomavirus macacae",
+      "Primate norovirus",
+      "Avian dependoparvovirus 1",
+      "Canine morbillivirus",
+      "Carnivore bocaparvovirus 2",
+      "Galliform aveparvovirus 1",
+      "Fowl aviadenovirus D",
+      "Fowl aviadenovirus E",
+      "Carnivore bocaparvovirus 3",
+      "Avian coronavirus", #Added 3 based on Manuscript
+      "Chicken anemia virus",
+      "Gyrovirus galga1",
+      "Bat luteovirus",
+      "Rocahepevirus ratti"
+      )) %>%
+    mutate(
+      Month = floor_date(Date, "month"),
+      FDate = format(Month, "%b-%Y")
+    ) %>%
+    group_by(sample_ID, City, Site, Month, species) %>%
+    summarize(RPKMF = sum(RPKMF), .groups = "drop") %>%
+    group_by(species) %>%
+    mutate(rel_ab = RPKMF / sum(RPKMF)) %>%
+    ungroup() %>%
+    group_by(Month, City, Site, species) %>%
+    summarize(
+      rel_ab = sum(rel_ab),
+      RPKMF  = sum(RPKMF),
+      .groups = "drop"
+    ) %>%
+    complete(
+      Month, Site, species,
+      fill = list(rel_ab = 0, RPKMF = 0)
+    ) %>%
+    filter(!is.na(City) & City != "NA") %>%
+    ggplot(aes(x = Month, y = species, fill = log10(RPKMF))) +
+    geom_tile(color = "black") +
+    scale_fill_gradient(
+      low = '#3e387a', high = '#fe715e',
+      na.value = 'white'
+       ) +
+    facet_wrap(vars(City), nrow = 3, scales = "free_x") +
+    scale_x_date(
+      date_breaks = "1 month",
+      date_labels = "%b-%y",
+      expand = c(0, 0)
+    ) +
+    labs(x = "Date", y = NULL) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45,hjust=1,colour = "black", size = 11), 
+          axis.text = element_text(colour = "black"), 
+          strip.text = element_text(color = "black", size = 13), 
+          axis.text.y = element_text(size = 12),
+          panel.grid.major.x = element_blank()) +
+    theme(strip.text.x = element_text(size = 13, colour = "black"), 
+          strip.background = element_rect(color="black", fill="#e5e5e5", size=0.5, linetype="solid"))
+  
+heatp2_animals
